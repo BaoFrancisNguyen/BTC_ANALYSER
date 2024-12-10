@@ -15,5 +15,30 @@ headers = {
 
 response = requests.request("GET", url, headers=headers, data=payload)
 
-data = json.loads(response.text)
-print(response.text)
+## APPEL A L'API
+# 1. Afficher le status_code
+# 2. Si le status_code est 200, afficher les données
+# 3. Si le status_code est différent de 200, afficher une erreur
+
+if response.status_code == 200:
+
+  # Afficher le contenu de la réponse
+  
+  data = json.loads(response.text)
+
+  # Afficher le nombre d'assets
+  nb_assets = len(data)
+  print('Nombre d\'assets:', nb_assets)
+
+  if nb_assets > 0:
+
+    # Afficher les 10 premiers assets
+    for i in range(10):
+      print(data[i]['name'])
+    
+  print('l\'appel à l\'API a fonctionné')
+  
+else:
+  # Afficher une erreur d'appel à l'API
+  print('Erreur',response.status_code, ', l\'appel à l\'API a retourné une erreur')
+
