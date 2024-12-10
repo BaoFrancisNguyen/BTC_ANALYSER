@@ -1,5 +1,6 @@
 import requests
 import json
+from coinAPI_service import API_KEY, BASE_URL
 
     ####Fonctions####
 
