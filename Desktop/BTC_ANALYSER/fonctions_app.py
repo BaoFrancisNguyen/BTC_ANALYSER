@@ -1,6 +1,7 @@
 import requests
 import json
-from coinAPI_service import API_KEY, BASE_URL
+from coinAPI_service import BASE_URL
+from api_config import API_KEY
 
     ####Fonctions####
 
@@ -16,23 +17,19 @@ def coinAPI_service_get_all_assets():
     return response
 
 def coinAPI_get_exchange_rates():
-    url = BASE_URL + "v1/exchangerate/BTC/EUR?period_id=1DAY&date_start=2024-01-01T00:00:00&date_end=2024-01-10T00:00:00"
+    url = BASE_URL + "v1/exchangerate/BTC/EUR/history?period_id=1DAY&time_start=2024-01-01T00:00:00&time_end=2024-01-10T00:00:00"
     payload = {}
     headers = {
-        'Accept': 'text/plain',
+        'Accept': 'application/json',
         'X-CoinAPI-Key': API_KEY
     }
     try:
         response = requests.request("GET", url, headers=headers, data=payload)
         if response.status_code == 200:
-
-            # Désérialiser le JSON
             data = json.loads(response.text)
-
-            # Afficher les taux de change pour chaque jour
-
-            for item in data.get('rates', []):  # Utilisez data.get pour éviter KeyError
-                print(f"{item['time_period_start']} : {item['rates']}")
+            # Vérifiez et affichez les données
+            for item in data:
+                print(f"Date : {item['time_period_start']}, Taux : {item['rate_close']}")
         else:
             print(f"Erreur {response.status_code}: {response.text}")
     except Exception as e:
