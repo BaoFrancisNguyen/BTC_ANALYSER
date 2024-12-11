@@ -59,4 +59,11 @@ def save_json_rates(rates_data, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(get_json_rates(rates_data))
 
-        
+def find_missing_dates(time_start, time_end, rates):
+    all_dates = set(
+        (time_start + timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range((time_end - time_start).days + 1)
+    )
+    returned_dates = set(item['time_period_start'][:10] for item in rates)
+    missing_dates = all_dates - returned_dates
+    return sorted(missing_dates)       
