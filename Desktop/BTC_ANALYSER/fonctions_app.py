@@ -16,8 +16,8 @@ def coinAPI_service_get_all_assets():
     response = requests.request("GET", url, headers=headers, data=payload)
     return response
 
-def coinAPI_get_exchange_rates():
-    url = BASE_URL + "v1/exchangerate/BTC/EUR/history?period_id=1DAY&time_start=2024-01-01T00:00:00&time_end=2024-01-10T00:00:00"
+def coinAPI_get_exchange_rates(asset_id_base='BTC', asset_id_quote='EUR', time_start='2024-01-01T00:00:00', time_end='2024-01-10T00:00:00', period_id='1DAY'):
+    url = BASE_URL + "v1/exchangerate/"+ asset_id_base + "/" + asset_id_quote + "/history?period_id=" + period_id + "&time_start="+ time_start + "&time_end=" + time_end
     payload = {}
     headers = {
         'Accept': 'application/json',
@@ -31,7 +31,7 @@ def coinAPI_get_exchange_rates():
             # affichez les données
 
             for item in data:
-                print(f"Date : {item['time_period_start'][:10]} Taux : {item['rate_close']}") #taux à la fermeture / fin de journée
+                print(f"Date : {item['time_period_start'][:10]} Taux : {item['rate_close']}") #taux à la fermeture / fin de journée, on enlève les heures   
         else:
             print(f"Erreur {response.status_code}: {response.text}")
     except Exception as e:
