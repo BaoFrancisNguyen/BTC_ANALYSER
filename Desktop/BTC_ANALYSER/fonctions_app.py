@@ -25,11 +25,13 @@ def coinAPI_get_exchange_rates():
     }
     try:
         response = requests.request("GET", url, headers=headers, data=payload)
+        print('analyse sur le taux de change BTC/EUR sur les 10 premiers jours de 2024')
         if response.status_code == 200:
             data = json.loads(response.text)
-            # Vérifiez et affichez les données
+            # affichez les données
+
             for item in data:
-                print(f"Date : {item['time_period_start']}, Taux : {item['rate_close']}")
+                print(f"Date : {item['time_period_start'][:10]} Taux : {item['rate_close']}") #taux à la fermeture / fin de journée
         else:
             print(f"Erreur {response.status_code}: {response.text}")
     except Exception as e:
