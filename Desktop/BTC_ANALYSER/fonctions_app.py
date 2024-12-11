@@ -25,7 +25,7 @@ def coinAPI_get_exchange_rates(asset_id_base, asset_id_quote, time_start, time_e
     }
     try:
         response = requests.request("GET", url, headers=headers, data=payload)
-        print('analyse sur le taux de change BTC/EUR sur les 10 premiers jours de 2024')
+        print('analyse sur le taux de change ' + asset_id_base + '/' + asset_id_quote + 'sur les 10 premiers jours de 2024')
         if response.status_code == 200:
             data = json.loads(response.text)
             # affichez les données
