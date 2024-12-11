@@ -16,7 +16,7 @@ def coinAPI_service_get_all_assets():
     response = requests.request("GET", url, headers=headers, data=payload)
     return response
 
-def coinAPI_get_exchange_rates(asset_id_base='BTC', asset_id_quote='EUR', time_start='2024-01-01T00:00:00', time_end='2024-01-10T00:00:00', period_id='1DAY'):
+def coinAPI_get_exchange_rates(asset_id_base, asset_id_quote, time_start, time_end, period_id):
     url = BASE_URL + "v1/exchangerate/"+ asset_id_base + "/" + asset_id_quote + "/history?period_id=" + period_id + "&time_start="+ time_start + "&time_end=" + time_end
     payload = {}
     headers = {
