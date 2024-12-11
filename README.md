@@ -1,6 +1,12 @@
 # BTC_ANALYSER
 BTC_ANALYSER
 
+### IN PROGRESS ###
+réponse à l'API OK
+sauvegarde des données dans un JSON OK
+
+
+
 #don't forget install requests
 pip install requests
 
