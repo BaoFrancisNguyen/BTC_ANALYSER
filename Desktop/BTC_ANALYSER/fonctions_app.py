@@ -2,7 +2,7 @@ import requests
 import json
 from coinAPI_service import BASE_URL
 from api_config import API_KEY
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
     ####Fonctions####
 
@@ -59,11 +59,26 @@ def save_json_rates(rates_data, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(get_json_rates(rates_data))
 
+def load_json_data_from_file(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        json = f.read()
+        f.close()
+        return json
+
 def find_missing_dates(time_start, time_end, rates):
+    # Convertir time_start et time_end en date si nécessaire
+    if isinstance(time_start, datetime):
+        time_start = time_start.date()
+    if isinstance(time_end, datetime):
+        time_end = time_end.date()
+
+    # Générer toutes les dates dans l'intervalle
     all_dates = set(
         (time_start + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range((time_end - time_start).days + 1)
     )
-    returned_dates = set(item['time_period_start'][:10] for item in rates)
+    # Obtenir les dates présentes dans les données
+    returned_dates = set(item['date'] for item in rates)
+    # Trouver les dates manquantes
     missing_dates = all_dates - returned_dates
-    return sorted(missing_dates)       
+    return sorted(missing_dates)     
