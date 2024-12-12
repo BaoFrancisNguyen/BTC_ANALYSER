@@ -81,4 +81,51 @@ def find_missing_dates(time_start, time_end, rates):
     returned_dates = set(item['date'] for item in rates)
     # Trouver les dates manquantes
     missing_dates = all_dates - returned_dates
-    return sorted(missing_dates)     
+    return sorted(missing_dates) 
+
+
+# date_start / date_end : object
+# max_days : int
+# return : list
+# start : 2021-01-01
+# end : 2021-05-01
+# max_days : 100
+# [2021-01-01 / 2021-04-11] [2021-04-12 / 2021-05-01]
+
+
+def get_dates_interval(date_start, date_end, max_days=100):
+    # Vérifier que les entrées sont du bon type
+    if not isinstance(date_start, (date, datetime)) or not isinstance(date_end, (date, datetime)):
+        raise ValueError("date_start et date_end doivent être de type datetime.date ou datetime.datetime")
+    
+    # Convertir datetime.datetime en datetime.date si nécessaire
+    if isinstance(date_start, datetime):
+        date_start = date_start.date()
+    if isinstance(date_end, datetime):
+        date_end = date_end.date()
+    
+    # Vérifier si les dates sont valides
+    if date_start > date_end:
+        raise ValueError("date_start doit être antérieure ou égale à date_end")
+    
+    if max_days <= 0:
+        raise ValueError("max_days doit être un entier positif")
+
+    # Calculer les intervalles
+    diff = date_end - date_start
+    diff_days = diff.days
+    dates_interval = []
+    while diff_days > 0:
+        if diff_days > max_days:
+            new_date_end = date_start + timedelta(days=max_days)
+            dates_interval.append((date_start, new_date_end))
+            date_start = new_date_end + timedelta(days=1)
+            diff_days -= max_days
+        else:
+            dates_interval.append((date_start, date_end))
+            diff_days = 0
+    return dates_interval
+
+
+
+       
