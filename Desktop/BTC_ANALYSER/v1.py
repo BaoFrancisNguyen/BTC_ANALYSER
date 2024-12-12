@@ -2,58 +2,44 @@ import requests
 import json
 from coinAPI_service import BASE_URL
 from api_config import API_KEY
-from fonctions_app import coinAPI_service_get_all_assets, coinAPI_get_exchange_rates, get_json_rates, save_json_rates, find_missing_dates
+from fonctions_app import coinAPI_service_get_all_assets, coinAPI_get_exchange_rates, get_json_rates, save_json_rates, find_missing_dates, load_json_data_from_file
+from datetime import date, timedelta, datetime
+from os import path
 from datetime import date, timedelta, datetime
 
-### affichier la date du jour et la date -10 jours
 
-# date d'aujourd'hui
-today = date.today()
-
-# convertir la date en string
-#date d'aujourd'hui
-today_str = today.strftime("%Y-%m-%d")
-
-# date d'y a 100 jours
-delta_100 = today - timedelta(days=100)
-
-# date d'y a 100 jours en string
-diff_str = delta_100.strftime("%Y-%m-%d")
-
-### limite de l'appel API en mode gratuit : max 100 appels par jour, max: historique de 100 jours
-
-# générer les blocs de 100 jours et les stocker dans un fichier json
-# pour chaque bloc de 100 jours, on fait un appel API pour récupérer les taux de change BTC/EUR
-
-### pour l'année 2024 ###
-# bloc 1 : 2024-01-01 -> 2024-04-09
-# bloc 2 : 2024-04-10 -> 2024-07-18
-# bloc 3 : 2024-07-19 -> 2024-10-26
-# bloc 4 : 2024-10-27 -> date du jour
-
-# faire un algorithme pour générer les dates de début et de fin pour chaque bloc
-# consolider les données dans un fichier json
-
+# Configurations
 asset_id_base = 'BTC'
 asset_id_quote = 'EUR'
-time_start = diff_str
-time_end = today_str
+today = date.today()
+today_str = today.strftime("%Y-%m-%d")
+delta_100 = today - timedelta(days=100)
+diff_str = delta_100.strftime("%Y-%m-%d")
+filename = f"{asset_id_base}_{asset_id_quote}.json"
 
-rates = coinAPI_get_exchange_rates(asset_id_base='BTC', asset_id_quote='EUR', time_start=diff_str, time_end= today_str, period_id='1DAY')
-filename = asset_id_base + '_' + asset_id_quote + ".json"
-
-if rates:
-    json_rates = get_json_rates(rates)
-    print(json_rates)
-    save_json_rates(rates, filename)
-    print(f"Les taux de change ont été sauvegardés dans le fichier {filename}")
-    #print(f"Taux récupérés pour {time_start} à {time_end}: {rates}")
-
+# Charger ou créer le fichier JSON
+if path.exists(filename):
+    print(f"Chargement des données depuis {filename}...")
+    json_rates = load_json_data_from_file(filename)
+    rates = json.loads(json_rates)
+    if rates:
+        save_data_date_start = rates[0]['date']
+        save_data_date_end = rates[-1]['date']
+        print(f"Les données existantes couvrent de {save_data_date_start} à {save_data_date_end}.")
+        # Vérifier les dates manquantes
+        start_date = datetime.strptime(save_data_date_start, "%Y-%m-%d")
+        end_date = datetime.strptime(save_data_date_end, "%Y-%m-%d")
+        missing_dates = find_missing_dates(start_date, today, rates)
+        if missing_dates:
+            print(f"Dates manquantes : {missing_dates}")
+    else:
+        print("Aucune donnée trouvée dans le fichier.")
 else:
-    print("Erreur lors de la récupération des taux de change")
-
-start_date = datetime.strptime(time_start, "%Y-%m-%d")
-end_date = datetime.strptime(time_end, "%Y-%m-%d")
-missing_dates = find_missing_dates(start_date, end_date, rates)
-print("Dates manquantes :", missing_dates)
+    print(f"Aucun fichier trouvé. Création de {filename}...")
+    rates = coinAPI_get_exchange_rates(asset_id_base, asset_id_quote, diff_str, today_str, period_id='1DAY')
+    if rates:
+        save_json_rates(rates, filename)
+        print(f"Données sauvegardées dans {filename}.")
+    else:
+        print("Erreur : Impossible de récupérer les données via l'API.")
 
