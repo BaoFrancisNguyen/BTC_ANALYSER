@@ -38,17 +38,35 @@ def get_player_combination():
 # validité de la combinaison
 # --> Vérifie si la combinaison est valide
 
-def verify_color_selection(combinaison, liste_couleurs_possibles):
+def verify_color_selection(player_combinaison, color_options):
     # Vérifie si la combinaison contient exactement 4 couleurs
-    if len(combinaison) != 4:
+    if len(player_combinaison) != 4:
         print("Tu dois entrer exactement 4 couleurs")
     
         return False
     
     # Vérifie si chaque couleur de la combinaison est valide
-    for couleur in combinaison:  # Boucle pour vérifier chaque couleur
+    for couleur in player_combinaison:  # Boucle pour vérifier chaque couleur
         # Si la couleur n'est pas dans la liste des couleurs possibles
-        if couleur not in liste_couleurs_possibles:
+        if couleur not in color_options:
             print(f"'{couleur}' n'est pas une couleur valide")
             return False
     return True
+
+# Compare la combinaison du joueur avec le code secret
+def compare_combinations(player_combinaison, generated_code):
+    # Initialisation des variables
+    nombre_bien_places = 0
+    nombre_mal_places = 0
+
+    # Boucle pour parcourir les positions
+    
+    for position_couleur in range(4):
+        # Si la couleur est bien placée
+        if player_combinaison[position_couleur] == generated_code[position_couleur]:
+            nombre_bien_places += 1 #incrémente le nombre de couleurs bien placées
+            #si la couleur est mal placée
+        elif player_combinaison[position_couleur] in generated_code:
+            nombre_mal_places += 1 #incrémente le nombre de couleurs mal placées
+
+    return nombre_bien_places, nombre_mal_places
