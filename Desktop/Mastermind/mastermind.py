@@ -34,3 +34,21 @@ def get_player_combination():
     player_combination = user_input.split()
     # retourne la combinaison du joueur
     return player_combination
+
+# validité de la combinaison
+# --> Vérifie si la combinaison est valide
+
+def verify_color_selection(combinaison, liste_couleurs_possibles):
+    # Vérifie si la combinaison contient exactement 4 couleurs
+    if len(combinaison) != 4:
+        print("Tu dois entrer exactement 4 couleurs")
+    
+        return False
+    
+    # Vérifie si chaque couleur de la combinaison est valide
+    for couleur in combinaison:  # Boucle pour vérifier chaque couleur
+        # Si la couleur n'est pas dans la liste des couleurs possibles
+        if couleur not in liste_couleurs_possibles:
+            print(f"'{couleur}' n'est pas une couleur valide")
+            return False
+    return True
