@@ -125,12 +125,7 @@ def save_social_data(data, filename="social_mentions.json"):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4)
 
-# Exemple d'utilisation
-start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-end_date = datetime.now().strftime('%Y-%m-%d')
-mentions = get_social_mentions("bitcoin", start_date, end_date, platform='twitter')
-if mentions:
-    save_social_data(mentions)
+
 
 
        
