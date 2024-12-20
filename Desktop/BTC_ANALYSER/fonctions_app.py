@@ -92,5 +92,45 @@ def get_dates_interval(date_start, date_end, max_days=100):
 
 
 
+def get_social_mentions(keyword, start_date, end_date, platform='twitter'):
+    """Récupère les mentions d'un mot-clé sur une plateforme sociale."""
+    url = f"https://api.socialmediaapi.com/{platform}/mentions"
+    headers = {
+        'Authorization': 'Bearer YOUR_API_KEY',  # Remplacer par votre clé API
+        'Content-Type': 'application/json'
+    }
+    params = {
+        'q': keyword,
+        'from': start_date,
+        'to': end_date
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            mentions = [
+                {"date": item["created_at"][:10], "count": 1}
+                for item in data.get("results", [])
+            ]
+            return mentions
+        else:
+            print(f"Erreur {response.status_code}: {response.text}")
+            return None
+    except Exception as e:
+        print(f"Erreur lors de l'appel API : {e}")
+        return None
+
+def save_social_data(data, filename="social_mentions.json"):
+    """Sauvegarde les mentions sociales dans un fichier JSON."""
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
+
+# Exemple d'utilisation
+start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+end_date = datetime.now().strftime('%Y-%m-%d')
+mentions = get_social_mentions("bitcoin", start_date, end_date, platform='twitter')
+if mentions:
+    save_social_data(mentions)
+
 
        
