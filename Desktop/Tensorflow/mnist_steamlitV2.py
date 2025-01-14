@@ -31,7 +31,7 @@ elif upload_choice == "Charger une image pour prédiction":
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert("L").resize((128, 128))
         image_array = np.array(image) / 255.0
-        st.image(image, caption='Image chargée', use_column_width=True)
+        st.image(image, caption='Image chargée', use_container_width=True)
         st.success("Image chargée avec succès.")
 
 # Paramètres ajustables
