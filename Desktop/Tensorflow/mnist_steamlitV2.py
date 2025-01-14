@@ -1,34 +1,35 @@
 import streamlit as st
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Flatten
 from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-import pandas as pd
+import os
 
 # Interface Streamlit
-st.title("Modèle de Classification avec TensorFlow")
+st.title("Modèle de Classification d'Images Médicales avec TensorFlow")
 
 # Chargement des données ou d'une image
-upload_choice = st.radio("Choisissez le type de données à charger :", ("Charger un fichier CSV", "Charger une image"))
+upload_choice = st.radio("Choisissez le type de données à charger :", ("Charger un dossier d'images", "Charger une image pour prédiction"))
 
 dataset_loaded = False
 uploaded_file = None
 
-if upload_choice == "Charger un fichier CSV":
-    uploaded_file = st.file_uploader("Téléchargez un fichier CSV contenant les données d'entraînement", type=["csv"])
+if upload_choice == "Charger un dossier d'images":
+    uploaded_file = st.file_uploader("Téléchargez un fichier ZIP contenant les images d'entraînement (organisé par dossier de classe)", type=["zip"])
     if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        st.write("Aperçu des données :", data.head())
+        import zipfile
+        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+            zip_ref.extractall("dataset")
+        st.success("Images extraites avec succès.")
         dataset_loaded = True
-        st.success("Jeu de données chargé avec succès.")
 
-elif upload_choice == "Charger une image":
-    uploaded_file = st.file_uploader("Téléchargez une image (28x28 pixels, en niveaux de gris)", type=["png", "jpg", "jpeg"])
+elif upload_choice == "Charger une image pour prédiction":
+    uploaded_file = st.file_uploader("Téléchargez une image médicale", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
-        image = Image.open(uploaded_file).convert("L").resize((28, 28))
+        image = Image.open(uploaded_file).convert("L").resize((128, 128))
         image_array = np.array(image) / 255.0
         st.image(image, caption='Image chargée', use_column_width=True)
         st.success("Image chargée avec succès.")
@@ -48,58 +49,73 @@ def get_optimizer(name, lr):
     else:
         return SGD(learning_rate=lr)
 
-# Construire le modèle
-def build_model(input_shape):
+# Construire le modèle CNN pour les images
+def build_cnn_model():
     model = Sequential([
-        Dense(128, activation='relu', input_shape=(input_shape,)),
+        Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 1)),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        MaxPooling2D((2, 2)),
+        Flatten(),
+        Dense(128, activation='relu'),
         Dropout(0.5),
         Dense(1, activation='sigmoid')  # Binaire : 0 ou 1
     ])
     return model
 
-if st.button("Lancer l'entraînement") and uploaded_file is not None:
-    if dataset_loaded:
-        # Récupérer dynamiquement la forme des données
-        features = data.iloc[:, :-1].values
-        labels = data.iloc[:, -1].values
-        input_shape = features.shape[1]
+if st.button("Lancer l'entraînement") and dataset_loaded:
+    from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-        model = build_model(input_shape)
+    # Générer les données depuis le dossier extrait
+    datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
 
-        model.compile(optimizer=get_optimizer(optimizer_choice, learning_rate),
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
+    train_generator = datagen.flow_from_directory(
+        "dataset",
+        target_size=(128, 128),
+        color_mode="grayscale",
+        batch_size=batch_size,
+        class_mode='binary',
+        subset='training'
+    )
 
-        history = model.fit(features,
-                            labels,
-                            epochs=epochs,
-                            batch_size=batch_size,
-                            validation_split=0.2,
-                            verbose=2)
-        st.success("Entraînement terminé !")
+    val_generator = datagen.flow_from_directory(
+        "dataset",
+        target_size=(128, 128),
+        color_mode="grayscale",
+        batch_size=batch_size,
+        class_mode='binary',
+        subset='validation'
+    )
 
-        # Visualisation des courbes d'entraînement
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        ax1.plot(history.history['loss'], label='Perte Entraînement')
-        ax1.plot(history.history['val_loss'], label='Perte Validation')
-        ax1.set_title('Courbe de Perte')
-        ax1.set_xlabel('Époques')
-        ax1.set_ylabel('Perte')
-        ax1.legend()
+    model = build_cnn_model()
+    model.compile(optimizer=get_optimizer(optimizer_choice, learning_rate),
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
 
-        ax2.plot(history.history['accuracy'], label='Précision Entraînement')
-        ax2.plot(history.history['val_accuracy'], label='Précision Validation')
-        ax2.set_title('Courbe de Précision')
-        ax2.set_xlabel('Époques')
-        ax2.set_ylabel('Précision')
-        ax2.legend()
-        st.pyplot(fig)
+    history = model.fit(train_generator, epochs=epochs, validation_data=val_generator)
+    st.success("Entraînement terminé !")
 
-    elif upload_choice == "Charger une image":
-        flat_image = image_array.flatten().reshape(1, -1)
-        model = build_model(flat_image.shape[1])
-        prediction = model.predict(flat_image)
-        predicted_class = int(prediction[0][0] > 0.5)
-        st.write(f"**Prédiction : {predicted_class}**")
-else:
-    st.warning("Veuillez charger un fichier CSV ou une image avant de lancer l'entraînement.")
+    # Afficher les résultats
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    ax1.plot(history.history['loss'], label='Perte Entraînement')
+    ax1.plot(history.history['val_loss'], label='Perte Validation')
+    ax1.set_title('Courbe de Perte')
+    ax1.set_xlabel('Époques')
+    ax1.set_ylabel('Perte')
+    ax1.legend()
+
+    ax2.plot(history.history['accuracy'], label='Précision Entraînement')
+    ax2.plot(history.history['val_accuracy'], label='Précision Validation')
+    ax2.set_title('Courbe de Précision')
+    ax2.set_xlabel('Époques')
+    ax2.set_ylabel('Précision')
+    ax2.legend()
+    st.pyplot(fig)
+
+elif upload_choice == "Charger une image pour prédiction" and uploaded_file is not None:
+    model = build_cnn_model()
+    flat_image = image_array.reshape(1, 128, 128, 1)
+    prediction = model.predict(flat_image)
+    predicted_class = int(prediction[0][0] > 0.5)
+    st.write(f"**Prédiction : {'Malade' if predicted_class else 'Sain'}**")
+
