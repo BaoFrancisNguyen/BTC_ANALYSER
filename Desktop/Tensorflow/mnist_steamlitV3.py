@@ -89,8 +89,9 @@ if st.button("Lancer l'entraînement") and dataset_loaded:
 
     model = build_cnn_model()
     model.compile(optimizer=get_optimizer(optimizer_choice, learning_rate),
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+
 
     history = model.fit(train_generator, epochs=epochs, validation_data=val_generator)
     st.success("Entraînement terminé !")
