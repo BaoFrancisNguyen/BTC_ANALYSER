@@ -70,22 +70,23 @@ if st.button("Lancer l'entraînement") and dataset_loaded:
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
 
     train_generator = datagen.flow_from_directory(
-        "dataset",
-        target_size=(128, 128),
-        color_mode="grayscale",
-        batch_size=batch_size,
-        class_mode='binary',
-        subset='training'
-    )
+    "dataset",
+    target_size=(128, 128),
+    color_mode="grayscale",
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training'
+)
 
-    val_generator = datagen.flow_from_directory(
-        "dataset",
-        target_size=(128, 128),
-        color_mode="grayscale",
-        batch_size=batch_size,
-        class_mode='binary',
-        subset='validation'
-    )
+val_generator = datagen.flow_from_directory(
+    "dataset",
+    target_size=(128, 128),
+    color_mode="grayscale",
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation'
+)
+
 
     model = build_cnn_model()
     model.compile(optimizer=get_optimizer(optimizer_choice, learning_rate),
