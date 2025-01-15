@@ -76,7 +76,7 @@ if st.button("Lancer l'entraînement") and dataset_loaded:
     batch_size=batch_size,
     class_mode='categorical',
     subset='training'
-)
+    )
 
 val_generator = datagen.flow_from_directory(
     "dataset",
@@ -85,7 +85,7 @@ val_generator = datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='categorical',
     subset='validation'
-)
+    )
 
 
     model = build_cnn_model()
@@ -118,6 +118,7 @@ elif upload_choice == "Charger une image pour prédiction" and uploaded_file is 
     model = build_cnn_model()
     flat_image = image_array.reshape(1, 128, 128, 1)
     prediction = model.predict(flat_image)
-    predicted_class = int(prediction[0][0] > 0.5)
-    st.write(f"**Prédiction : {'PAS FEU' if predicted_class else 'FEU'}**")
+    predicted_class = np.argmax(prediction[0])
+    st.write(f"**Prédiction : {predicted_class}**")
+
 
