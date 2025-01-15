@@ -18,7 +18,7 @@ dataset_loaded = False
 uploaded_file = None
 
 if upload_choice == "Charger un dossier d'images":
-    uploaded_file = st.file_uploader("Téléchargez un fichier ZIP contenant les images d'entraînement (organisé par dossier de classe)", type=["zip"])
+    uploaded_file = st.file_uploader("Téléchargez un fichier ZIP contenant les images d'entraîment (organisé par dossier de classe)", type=["zip"])
     if uploaded_file is not None:
         import zipfile
         with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
@@ -50,7 +50,7 @@ def get_optimizer(name, lr):
         return SGD(learning_rate=lr)
 
 # Construire le modèle CNN pour les images
-def build_cnn_model():
+def build_cnn_model(nombre_de_classes):
     model = Sequential([
         Conv2D(32, (3, 3), activation='relu', input_shape=(128, 128, 1)),
         MaxPooling2D((2, 2)),
@@ -70,29 +70,29 @@ if st.button("Lancer l'entraînement") and dataset_loaded:
     datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
 
     train_generator = datagen.flow_from_directory(
-    "dataset",
-    target_size=(128, 128),
-    color_mode="grayscale",
-    batch_size=batch_size,
-    class_mode='categorical',
-    subset='training'
+        "dataset",
+        target_size=(128, 128),
+        color_mode="grayscale",
+        batch_size=batch_size,
+        class_mode='categorical',
+        subset='training'
     )
 
-val_generator = datagen.flow_from_directory(
-    "dataset",
-    target_size=(128, 128),
-    color_mode="grayscale",
-    batch_size=batch_size,
-    class_mode='categorical',
-    subset='validation'
+    val_generator = datagen.flow_from_directory(
+        "dataset",
+        target_size=(128, 128),
+        color_mode="grayscale",
+        batch_size=batch_size,
+        class_mode='categorical',
+        subset='validation'
     )
 
+    nombre_de_classes = len(train_generator.class_indices)
 
-    model = build_cnn_model()
+    model = build_cnn_model(nombre_de_classes)
     model.compile(optimizer=get_optimizer(optimizer_choice, learning_rate),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
 
     history = model.fit(train_generator, epochs=epochs, validation_data=val_generator)
     st.success("Entraînement terminé !")
@@ -102,23 +102,25 @@ val_generator = datagen.flow_from_directory(
     ax1.plot(history.history['loss'], label='Perte Entraînement')
     ax1.plot(history.history['val_loss'], label='Perte Validation')
     ax1.set_title('Courbe de Perte')
-    ax1.set_xlabel('Époques')
+    ax1.set_xlabel('Epoques')
     ax1.set_ylabel('Perte')
     ax1.legend()
 
     ax2.plot(history.history['accuracy'], label='Précision Entraînement')
     ax2.plot(history.history['val_accuracy'], label='Précision Validation')
     ax2.set_title('Courbe de Précision')
-    ax2.set_xlabel('Époques')
+    ax2.set_xlabel('Epoques')
     ax2.set_ylabel('Précision')
     ax2.legend()
     st.pyplot(fig)
 
 elif upload_choice == "Charger une image pour prédiction" and uploaded_file is not None:
-    model = build_cnn_model()
+    nombre_de_classes = 10  # Ajustez ce nombre selon vos besoins
+    model = build_cnn_model(nombre_de_classes)
     flat_image = image_array.reshape(1, 128, 128, 1)
     prediction = model.predict(flat_image)
     predicted_class = np.argmax(prediction[0])
-    st.write(f"**Prédiction : {predicted_class}**")
+    st.write(f"**Prédiction : Classe {predicted_class}**")
+
 
 
