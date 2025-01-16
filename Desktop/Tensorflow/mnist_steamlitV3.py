@@ -9,7 +9,7 @@ from PIL import Image
 import os
 
 # Interface Streamlit
-st.title("Modèle de Classification d'Images Médicales avec TensorFlow")
+st.title("Modèle de Classification d'Images avec TensorFlow")
 
 # Chargement des données ou d'une image
 upload_choice = st.radio("Choisissez le type de données à charger :", ("Charger un dossier d'images", "Charger une image pour prédiction"))
@@ -120,7 +120,9 @@ elif upload_choice == "Charger une image pour prédiction" and uploaded_file is 
     flat_image = image_array.reshape(1, 128, 128, 1)
     prediction = model.predict(flat_image)
     predicted_class = np.argmax(prediction[0])
-    st.write(f"**Prédiction : Classe {predicted_class}**")
+    confidence = prediction[0][predicted_class] * 100
+    st.write(f"**Prédiction : Classe {predicted_class} avec une confiance de {confidence:.2f}%**")
+
 
 
 
