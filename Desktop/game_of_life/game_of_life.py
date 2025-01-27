@@ -10,6 +10,8 @@ import time
                   [0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0]])'''
 
+import numpy as np
+
 # Demander à l'utilisateur les dimensions de la frame
 rows = int(input("Entrez le nombre de lignes (rows) de la frame : "))
 cols = int(input("Entrez le nombre de colonnes (cols) de la frame : "))
@@ -17,15 +19,43 @@ cols = int(input("Entrez le nombre de colonnes (cols) de la frame : "))
 # Créer une frame de zéros avec la taille spécifiée
 frame = np.zeros((rows, cols), dtype=int)
 
-#ajouter un motif (ligne de '1' au centre, si possible)
-if rows >= 3 and cols >= 3:
-    center_row = rows // 2
-    start_col = (cols // 2) - 1
-    frame[center_row, start_col:start_col + 3] = 1
+# Menu pour choisir un motif
+print("\nChoisissez un motif à ajouter à la frame :")
+print("1. Ligne de '1' au centre")
+print("2. Carré de '1' au centre")
+print("3. Fer à cheval")
+print("4. Aucun motif (frame vide)")
 
-# Afficher la frame
+# Demander à l'utilisateur de choisir un motif
+motif_choice = int(input("Entrez le numéro du motif choisi (1-4) : "))
+
+# Appliquer le motif choisi
+if motif_choice == 1:  # Ligne de '1' au centre
+    if rows >= 3 and cols >= 3:
+        center_row = rows // 2
+        start_col = (cols // 2) - 1
+        frame[center_row, start_col:start_col + 3] = 1
+elif motif_choice == 2:  # Carré de '1' au centre
+    if rows >= 3 and cols >= 3:
+        center_row = rows // 2
+        center_col = cols // 2
+        frame[center_row - 1:center_row + 2, center_col - 1:center_col + 2] = 1
+elif motif_choice == 3:  # Fer à cheval
+    if rows >= 5 and cols >= 5:
+        center_row = rows // 2
+        center_col = cols // 2
+        frame[center_row - 2:center_row + 3, center_col - 2:center_col + 3] = 0
+        frame[center_row - 2, center_col] = 1
+        frame[center_row - 1:center_row + 2, center_col - 2:center_col + 3] = 1
+elif motif_choice == 4:  # Aucun motif
+    pass
+else:
+    print("Choix invalide. Aucune modification appliquée.")
+
+# Afficher la frame résultante
 print("\nVoici la frame créée :")
 print(frame)
+
 
 ### Index de la frame:
 
