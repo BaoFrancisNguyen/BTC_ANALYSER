@@ -1,14 +1,31 @@
 import numpy as np
 import time
 
-frame = np.array([[0, 0, 0, 0, 0, 0, 0],
+# configuration de la frame
+'''frame = np.array([[0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 1, 1, 1, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0]])
+                  [0, 0, 0, 0, 0, 0, 0]])'''
 
+# Demander à l'utilisateur les dimensions de la frame
+rows = int(input("Entrez le nombre de lignes (rows) de la frame : "))
+cols = int(input("Entrez le nombre de colonnes (cols) de la frame : "))
+
+# Créer une frame de zéros avec la taille spécifiée
+frame = np.zeros((rows, cols), dtype=int)
+
+#ajouter un motif (ligne de '1' au centre, si possible)
+if rows >= 3 and cols >= 3:
+    center_row = rows // 2
+    start_col = (cols // 2) - 1
+    frame[center_row, start_col:start_col + 3] = 1
+
+# Afficher la frame
+print("\nVoici la frame créée :")
+print(frame)
 
 ### Index de la frame:
 
@@ -46,7 +63,8 @@ def compute_number_neighbors(paded_frame, index_row, index_col):
         for col in range(index_col - 1, index_col + 2): #attention à l'exclusion de la valeur de fin / pas index_col + 1 mais index_col + 2
 
             # vérifier si la cellule est vivante et différente de la cellule actuelle
-            # La boucle parcourt toutes les cases autour de la cellule centrale, y compris la cellule centrale elle-même.
+            # La boucle parcourt toutes les cases autour de la cellule centrale, y compris la cellule centrale elle-même
+
             # On doit ajouter if not pour ignorer la cellule centrale.
             if not (row == index_row and col == index_col):
                 # ajouter la valeur de la cellule à number_neighbors
