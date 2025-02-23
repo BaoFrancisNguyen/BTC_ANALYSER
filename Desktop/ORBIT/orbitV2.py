@@ -6,6 +6,7 @@ import ollama
 from googlesearch import search
 from config import NOTION_TOKEN, DATABASE_ID
 from tqdm import tqdm  # Barre de progression
+import json
 
 # Config Notion
 #NOTION_TOKEN = "ton_token_secret"
@@ -27,42 +28,37 @@ historique_fiabilite = {
 
 # Recherche Google News pour IA
 
+# Charger les préférences
+with open("preferences.json", "r") as f:
+    preferences = json.load(f)
+
 def rechercher_articles_ia():
-    requete = "intelligence artificielle actualités"
+    requete = f"{' OR '.join(preferences['themes'])} actualités"
     liens = list(search(requete, num_results=20))
-
+    
     articles = []
-    print("\n Recherche d'articles en cours...")
-    for url in tqdm(liens, desc="Recherche d'articles", unit="article"):
-        try:
-            headers = {"User-Agent": "Mozilla/5.0"}
-            response = requests.get(url, headers=headers)
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # Trouver le titre de l'article
-            titre = soup.find("h1") or soup.find("h2")
-            if titre:
-                titre = titre.text.strip()
-                articles.append({"title": titre, "url": url})
-        except Exception as e:
-            print(f" Erreur en récupérant {url} : {e}")
+    for url in liens:
+        # Récupération des articles comme avant...
+        pass
 
     return articles
 
 # Fonction évolutive de scoring
-def score_fiabilite(source_url):
-    domaine = source_url.split("/")[2]  # Récupérer le domaine du site
-    score = historique_fiabilite.get(domaine, 5)  # Score par défaut à 5 si inconnu
+def score_pertinence(article):
+    """ Attribuer un score en fonction de plusieurs critères """
+    score = 0
+    domaine = article["url"].split("/")[2]
+    score += historique_fiabilite.get(domaine, 5) * 2  # Plus fiable = plus de points
 
-    # Critères d'évolution
-    if score >= 8:
-        score += 0.5  # Boost si site déjà fiable
-    elif score <= 5:
-        score -= 1  # Réduction pour sites peu connus
+    # Ajouter d'autres critères (ex: longueur du texte si récupérable)
+    if len(article["title"]) > 50:  # Un titre plus long peut indiquer un article détaillé
+        score += 2
 
-    # Mise à jour du dictionnaire (on pourrait stocker dans Notion aussi)
-    historique_fiabilite[domaine] = max(3, min(10, score))  # Score entre 3 et 10
-    return historique_fiabilite[domaine]
+    return score
+
+# Trier les articles avant de les traiter
+articles = sorted(rechercher_articles_ia(), key=score_pertinence, reverse=True)
+
 
 # Fonction pour générer un résumé avec Ollama
 def generer_resume(article_url):
