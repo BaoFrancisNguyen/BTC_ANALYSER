@@ -76,6 +76,35 @@ def generer_resume(article_url):
     except Exception as e:
         print(f"⚠️ Erreur avec Ollama : {e}")
         return "Résumé indisponible."
+    
+for article in articles:
+    print(f"\n📄 Traitement : {article['title']} - {article['url']}")
+    try:
+        resume = generer_resume(article["url"])
+        score = score_fiabilite(article["url"])
+
+        if score >= preferences["min_reliability"]:
+            ajouter_dans_notion(article["title"], resume, article["url"], score)
+            sauvegarder_pour_mistral(article, resume)  # ✅ Ajout des articles pour l'entraînement
+        else:
+            print(f"⏭ Article ignoré (fiabilité trop basse : {score})")
+
+    except Exception as e:
+        print(f"❌ Erreur pour {article['title']}: {e}")
+
+# Sauvegarde des articles pour l'entraînement de Mistral
+def sauvegarder_pour_mistral(article, summary):
+    data = {
+        "input": article["title"] + "\n" + article["url"] + "\n" + article["content"],
+        "output": summary
+    }
+
+    with open("mistral_training_data.jsonl", "a", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        f.write("\n")  # Nouvelle ligne pour respecter le format JSONL
+
+    print(f"📝 Article sauvegardé pour l'entraînement de Mistral : {article['title']}")
+
 
 # 📝 **4. Ajouter un article dans Notion**
 def ajouter_dans_notion(title, summary, source_url, reliability):
@@ -145,3 +174,7 @@ print("⏳ L'agent est en attente d'exécution... (Ctrl+C pour quitter)")
 while True:
     schedule.run_pending()
     time.sleep(60)  # Vérification toutes les minutes
+
+
+
+
