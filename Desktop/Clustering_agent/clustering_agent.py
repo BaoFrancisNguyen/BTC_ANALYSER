@@ -8,6 +8,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# ------------------- Partie 1: Cleaning ------------------------------
+
 # Charger le dataset
 data = pd.read_csv("Sad.csv")  # Remplace par ton fichier CSV
 
@@ -35,6 +37,8 @@ numerical_data_imputed = imputer.fit_transform(numerical_data)
 scaler = StandardScaler()
 numerical_data_scaled = scaler.fit_transform(numerical_data_imputed)
 
+# ------------------- Partie 2: Clustering ------------------------------
+
 # Appliquer KMeans pour le clustering
 n_clusters = 3
 kmeans = KMeans(n_clusters=n_clusters, random_state=42)
@@ -51,8 +55,10 @@ print(data.head())
 silhouette_avg = silhouette_score(numerical_data_scaled, clusters)
 print(f"Silhouette Score: {silhouette_avg}")
 
+# ------------------- Partie 3: Recommandations ------------------------------
+
 # Recommandations avec Deepseek
-model_name = "C:\\Users\\Francis\\Desktop\\Clustering_agent\\deepseek-coder-1.3b-base"  # Remplace par ton chemin local vers le modèle .gguf
+model_name = "deepseek-coder-1.3b-base"
 
 # Charger le modèle et le tokenizer
 try:
@@ -92,11 +98,13 @@ for cluster_id in range(n_clusters):
     print(recommendations)
     print("\n")
 
+# ------------------- Partie 4: Visualisation ------------------------------
+
 # Réduire les dimensions avec PCA pour visualiser en 2D
 pca = PCA(n_components=2)
 data_reduced = pca.fit_transform(numerical_data_imputed)  # Appliquer PCA sur les données imputées
 
-# Clustering (KMeans par exemple)
+# Clustering avec KMeans
 kmeans = KMeans(n_clusters=3, random_state=50)  # Choisir le nombre de clusters
 data['Cluster'] = kmeans.fit_predict(data_reduced)
 
