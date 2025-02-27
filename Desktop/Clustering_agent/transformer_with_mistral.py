@@ -54,6 +54,9 @@ def main():
     # Choisir une option (0=auto, 1=standard, 2=avec fusion)
     transformations = transformations_options[0]  # Détection automatique par défaut
     
+    # Contexte optionnel fourni par l'utilisateur
+    context = None
+    
     # Lecture directe du DataFrame pour plus de contrôle
     try:
         df = pd.read_csv(input_file)
@@ -62,6 +65,12 @@ def main():
         # Affichage des premières lignes pour vérification
         print("\nAperçu des données originales:")
         print(df.head(2))
+        
+        # Demander un contexte optionnel à l'utilisateur
+        user_context = input("\nVoulez-vous fournir un contexte pour l'analyse Mistral ? (Par exemple, 'domaine médical', 'finance', etc.) Si non, laissez vide : ").strip()
+        if user_context:
+            context = user_context
+            print(f"Contexte ajouté : {context}")
         
         # Examinons les paires de colonnes candidates pour la fusion
         pairs = transformer._identify_column_pairs(df)
@@ -78,7 +87,7 @@ def main():
                 pass
         
         # Appliquer la transformation
-        df_transformed, metadata = transformer.transform(df, transformations)
+        df_transformed, metadata = transformer.transform(df, transformations, context)
         
         # Enregistrer le résultat
         df_transformed.to_csv(output_file, index=False)
