@@ -49,7 +49,7 @@ class DataTransformer:
         except Exception as e:
             self.logger.error(f"Erreur de connexion à Ollama: {e}")
     
-    def generate_with_ollama(self, prompt, max_tokens=500, temperature=0.3):
+    def generate_with_ollama(self, prompt, max_tokens=800, temperature=0.3):
         """Génère une réponse avec Ollama API"""
         try:
             payload = {
@@ -57,13 +57,27 @@ class DataTransformer:
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": temperature,
+                    "temperature": temperature, # Température pour l'échantillonnage, 0.0 signifie déterministe / 1.0 plus créatif
                     "num_predict": max_tokens,
-                    "top_p": 0.9,
-                    "top_k": 40
+                    "top_p": 0.9, # Limite cumulative pour le sampling top-p
+                    "top_k": 40, # Limite pour le sampling top-k
+                    "frequency_penalty": 1.0,  #pénalité de répétition
+                    "presence_penalty": 0.6 
                 }
             }
-            
+""" Combinaisons optimales
+
+Pour des analyses précises et factuelles :
+
+Température basse (0.1-0.3)
+top_p modéré (0.8-0.9)
+top_k modéré (30-50)
+
+Pour des textes créatifs :
+
+Température plus élevée (0.7-1.0)
+top_p élevé (0.95+)
+top_k élevé (80+)"""
             response = requests.post(self.ollama_url, json=payload)
             
             if response.status_code == 200:
