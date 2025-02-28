@@ -11,8 +11,6 @@ import json
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Remplacer l'import llama_cpp par la bibliothèque requests pour Ollama API
-
 
 class DataTransformer:
     def __init__(self, model_name="mistral:7b", context_size=4096, log_level=logging.INFO):
@@ -65,19 +63,8 @@ class DataTransformer:
                     "presence_penalty": 0.6 
                 }
             }
-""" Combinaisons optimales
 
-Pour des analyses précises et factuelles :
 
-Température basse (0.1-0.3)
-top_p modéré (0.8-0.9)
-top_k modéré (30-50)
-
-Pour des textes créatifs :
-
-Température plus élevée (0.7-1.0)
-top_p élevé (0.95+)
-top_k élevé (80+)"""
             response = requests.post(self.ollama_url, json=payload)
             
             if response.status_code == 200:
@@ -244,7 +231,7 @@ top_k élevé (80+)"""
                 
                 # Appliquer la fusion pour chaque paire éligible
                 for col1, col2, score in eligible_pairs:
-                    # Vérifier que les colonnes existent encore (pas déjà fusionnées)
+                    # Vérifie que les colonnes existent encore (pas déjà fusionnées)
                     if col1 in df_transformed.columns and col2 in df_transformed.columns:
                         df_result, success, new_col = self._fuse_columns(df_transformed, col1, col2)
                         if success:
@@ -257,7 +244,7 @@ top_k élevé (80+)"""
                                 "details": f"Fusion de '{col1}' et '{col2}' → '{new_col}' (score: {score:.2f})"
                             })
         
-        # Créer les métadonnées de résultat
+        # Crée les métadonnées de résultat
         metadata = {
             "original_shape": df.shape,
             "transformed_shape": df_transformed.shape,
@@ -270,7 +257,7 @@ top_k élevé (80+)"""
             }
         }
         
-        # Ajouter une analyse avec Mistral si disponible
+        # Ajoute une analyse avec Mistral
         
         analysis = self.generate_dataset_analysis(df_transformed, context)
         if analysis:
@@ -289,7 +276,7 @@ top_k élevé (80+)"""
         Returns:
             str: Analyse textuelle du dataset ou None en cas d'échec
         """
-        # Vérifier si on peut se connecter à Ollama
+        # Vérifie si on peut se connecter à Ollama
         try:
             self.logger.info("Génération d'une analyse du dataset avec Ollama")
             
