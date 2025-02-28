@@ -4,41 +4,155 @@ import numpy as np
 import re
 from llama_cpp import Llama
 import logging
+import requests
+import json
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Remplacer l'import llama_cpp par la bibliothèque requests pour Ollama API
+
+
 class DataTransformer:
-    """
-    Classe d'agent de transformation intégrable dans une application plus large.
-    Conçue pour être utilisée comme un composant d'une application plus complète.
-    """
-    
-    def __init__(self, model_path=None, context_size=512, log_level=logging.INFO):
+    def __init__(self, model_name="mistral:7b", context_size=4096, log_level=logging.INFO):
         """
-        Initialise l'agent de transformation.
+        Initialise l'agent de transformation avec Ollama.
         
         Args:
-            model_path: Chemin vers le modèle LLM (ou None pour mode sans modèle)
-            context_size: Taille du contexte du modèle
+            model_name: Nom du modèle dans Ollama (ex: "mistral:7b", "llama3:8b")
+            context_size: Taille du contexte (plus grand avec Ollama)
             log_level: Niveau de détail des logs
         """
-        self.model_path = model_path
-        self.context_size = context_size
+        #self.history = TransformationHistory()
         self.llm = None
+        self.model_name = model_name
+        self.context_size = context_size
+        self.ollama_url = "http://localhost:11434/api/generate"  # URL par défaut d'Ollama
         
         # Configurer le logger
         self.logger = logging.getLogger(f"{__name__}.transformer")
         self.logger.setLevel(log_level)
         
-        # Charger le modèle s'il est spécifié
-        if model_path and os.path.exists(model_path):
-            try:
-                self.llm = Llama(model_path=model_path, n_ctx=context_size)
-                self.logger.info(f"Modèle chargé: {model_path}")
-            except Exception as e:
-                self.logger.error(f"Erreur lors du chargement du modèle: {e}")
+        # Vérifier si Ollama est accessible
+        try:
+            response = requests.get("http://localhost:11434/api/tags")
+            if response.status_code == 200:
+                models = response.json().get("models", [])
+                model_names = [m.get("name") for m in models]
+                if self.model_name in model_names:
+                    self.logger.info(f"Modèle Ollama disponible: {self.model_name}")
+                else:
+                    self.logger.warning(f"Modèle {self.model_name} non trouvé dans Ollama. Modèles disponibles: {model_names}")
+            else:
+                self.logger.error("Impossible de se connecter à Ollama API")
+        except Exception as e:
+            self.logger.error(f"Erreur de connexion à Ollama: {e}")
+    
+    def generate_with_ollama(self, prompt, max_tokens=500, temperature=0.3):
+        """Génère une réponse avec Ollama API"""
+        try:
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                    "top_p": 0.9,
+                    "top_k": 40
+                }
+            }
+            
+            response = requests.post(self.ollama_url, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {"choices": [{"text": result.get("response", "")}]}
+            else:
+                self.logger.error(f"Erreur Ollama: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la génération Ollama: {e}")
+            return None
+
+    def get_transformation_recommendations(self, df, dataset_info):
+        """
+        Utilise Ollama pour recommander des transformations spécifiques.
+        
+        Args:
+            df: DataFrame à analyser
+            dataset_info: Informations d'analyse du dataset
+            
+        Returns:
+            list: Liste des transformations recommandées
+        """
+        try:
+            # Créer un contexte riche pour le modèle
+            missing_ratio = dataset_info["missing_values"]["total_missing"] / (df.shape[0] * df.shape[1]) if df.shape[0] * df.shape[1] > 0 else 0
+            
+            # Rendre l'information sur les colonnes plus concise
+            numeric_cols_info = []
+            for col, info in dataset_info["numeric_columns"].items():
+                needs_norm = "Oui" if info.get("needs_normalization", False) else "Non"
+                numeric_cols_info.append(f"{col} (min={info['min']:.2f}, max={info['max']:.2f}, std={info['std_dev']:.2f}, normalisation nécessaire: {needs_norm})")
+            
+            categorical_cols_info = []
+            for col, info in dataset_info["categorical_columns"].items():
+                categorical_cols_info.append(f"{col} (uniques: {info['unique_values']}, binaire: {'Oui' if info['is_binary'] else 'Non'}, ordinal: {'Oui' if info['is_ordinal'] else 'Non'})")
+            
+            # Système de prompt spécifique à la tâche
+            system_prompt = """Tu es un expert en prétraitement de données pour le machine learning.
+    Tu dois recommander les transformations les plus pertinentes pour préparer ce dataset.
+    Base tes recommandations sur les caractéristiques du dataset et pas sur des suppositions.
+    Choisis parmi les transformations suivantes:
+    - 'missing_values': Nettoyage des valeurs manquantes
+    - 'normalize': Normalisation des colonnes numériques
+    - 'encode': Encodage des colonnes catégorielles
+    - 'fusion': Fusion de colonnes corrélées"""
+
+            # Prompt principal avec informations détaillées
+            user_prompt = f"""Analyse ce dataset ({df.shape[0]} rows, {df.shape[1]} columns):
+
+    Valeurs manquantes: {dataset_info["missing_values"]["total_missing"]} ({missing_ratio:.1%})
+
+    Colonnes numériques:
+    {chr(10).join(numeric_cols_info[:5])}{'...' if len(numeric_cols_info) > 5 else ''}
+
+    Colonnes catégorielles:
+    {chr(10).join(categorical_cols_info[:5])}{'...' if len(categorical_cols_info) > 5 else ''}
+
+    Recommande exactement 3 transformations, de la plus à la moins importante.
+    Réponds UNIQUEMENT avec la liste des transformations au format suivant: ["transformation1", "transformation2", "transformation3"]"""
+
+            # Format complet du prompt
+            full_prompt = f"<s>[INST] {system_prompt} [/INST]</s>\n\n<s>[INST] {user_prompt} [/INST]"
+            
+            # Appel à Ollama
+            response = self.generate_with_ollama(
+                full_prompt,
+                max_tokens=100,
+                temperature=0.1  # Température très basse pour des réponses cohérentes et prévisibles
+            )
+            
+            if response and "choices" in response and response["choices"][0]["text"]:
+                response_text = response["choices"][0]["text"].strip()
+                
+                # Extraire la liste des transformations
+                import re
+                matches = re.search(r'\[(.*?)\]', response_text)
+                if matches:
+                    transformations = [t.strip().strip("'\"") for t in matches.group(1).split(',')]
+                    self.logger.info(f"Transformations recommandées par Ollama: {transformations}")
+                    return transformations
+            
+            self.logger.warning("Impossible d'extraire les recommandations d'Ollama")
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la recommandation avec Ollama: {e}")
+        
+        # Fallback si échec
+        return self._detect_transformations(df, dataset_info)
     
     def transform(self, df, transformations=None, context=None):
         """
@@ -143,16 +257,16 @@ class DataTransformer:
         }
         
         # Ajouter une analyse avec Mistral si disponible
-        if self.llm is not None:
-            analysis = self.generate_dataset_analysis(df_transformed, context)
-            if analysis:
-                metadata["analysis"] = analysis
+        
+        analysis = self.generate_dataset_analysis(df_transformed, context)
+        if analysis:
+            metadata["analysis"] = analysis
         
         return df_transformed, metadata
     
     def generate_dataset_analysis(self, df, context=None):
         """
-        Génère une analyse orientée insights du dataset avec Mistral.
+        Génère une analyse orientée insights du dataset avec Ollama.
         
         Args:
             df: DataFrame à analyser
@@ -161,93 +275,80 @@ class DataTransformer:
         Returns:
             str: Analyse textuelle du dataset ou None en cas d'échec
         """
-        if self.llm is None:
-            return None
-        
-        self.logger.info("Génération d'une analyse du dataset avec Mistral")
-        
-        # Créer un prompt personnalisé pour obtenir des insights
-        # Préparer des informations générales sur le dataset
-        numeric_cols = df.select_dtypes(include=['number']).columns
-        categorical_cols = df.select_dtypes(exclude=['number']).columns
-        
-        # Produire des statistiques clés sur les corrélations et distributions
-        correlations = {}
-        if len(numeric_cols) >= 2:
-            try:
-                corr_matrix = df[numeric_cols].corr()
-                # Trouver les 3 paires les plus corrélées
-                corr_pairs = []
-                for i, col1 in enumerate(numeric_cols):
-                    for j, col2 in enumerate(numeric_cols):
-                        if i < j:
-                            corr_pairs.append((col1, col2, abs(corr_matrix.loc[col1, col2])))
-                
-                # Trier et prendre les 3 plus fortes corrélations
-                corr_pairs.sort(key=lambda x: x[2], reverse=True)
-                for col1, col2, corr_val in corr_pairs[:3]:
-                    correlations[f"{col1}-{col2}"] = corr_val
-            except:
-                pass
-        
-        # Détecter les colonnes avec distributions intéressantes
-        skewed_cols = []
-        for col in numeric_cols:
-            try:
-                skew = df[col].skew()
-                if abs(skew) > 1.5:
-                    skewed_cols.append((col, skew))
-            except:
-                continue
-        
-        # Créer un prompt détaillé qui oriente vers les insights
-        base_prompt = (
-            f"Tu es un analyste de données expert. J'ai un dataset avec {len(df)} lignes et {len(df.columns)} colonnes. "
-            f"Je veux que tu identifies 2-3 insights intéressants et pertinents, pas une simple description.\n\n"
-            f"Voici quelques informations:\n"
-            f"- {len(numeric_cols)} colonnes numériques et {len(categorical_cols)} colonnes catégorielles\n"
-            f"- Valeurs manquantes totales: {df.isna().sum().sum()}\n"
-        )
-        
-        # Ajouter des informations sur les corrélations
-        if correlations:
-            base_prompt += "- Corrélations notables:\n"
-            for pair, corr in correlations.items():
-                base_prompt += f"  * {pair}: {corr:.2f}\n"
-        
-        # Ajouter des informations sur les distributions asymétriques
-        if skewed_cols:
-            base_prompt += "- Colonnes avec distribution asymétrique:\n"
-            for col, skew in skewed_cols:
-                direction = "droite" if skew > 0 else "gauche"
-                base_prompt += f"  * {col}: forte asymétrie vers la {direction}\n"
-        
-        # Ajouter le contexte spécifique si fourni
-        if context:
-            prompt = (
-                f"{base_prompt}\n"
-                f"CONTEXTE SPÉCIFIQUE: {context}\n\n"
-                f"Identifie les insights les plus importants dans ce dataset, en tenant compte du contexte fourni. "
-                f"Concentre-toi sur ce qui est surprenant, contre-intuitif ou actionnable. "
-                f"Ne te contente pas de décrire les colonnes ou les statistiques. "
-                f"Sois concis (max. 3-4 phrases par insight)."
-            )
-        else:
-            prompt = (
-                f"{base_prompt}\n"
-                f"Identifie les 2-3 insights les plus importants dans ce dataset. "
-                f"Priorise ce qui est surprenant, contre-intuitif ou actionnable. "
-                f"Évite la description simple. Sois concis (max. 3-4 phrases par insight)."
-            )
-        
+        # Vérifier si on peut se connecter à Ollama
         try:
-            # Limiter à 300 tokens pour garder l'analyse concise
-            result = self.llm(prompt, max_tokens=300)
-            analysis = result["choices"][0]["text"].strip()
-            self.logger.info("Analyse générée avec succès")
-            return analysis
+            self.logger.info("Génération d'une analyse du dataset avec Ollama")
+            
+            # Créer un prompt personnalisé pour obtenir des insights
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            categorical_cols = df.select_dtypes(exclude=['number']).columns
+            
+            # Statistiques clés pour enrichir le prompt
+            stats_info = []
+            
+            # Statistiques générales
+            stats_info.append(f"Dimensions: {df.shape[0]} lignes, {df.shape[1]} colonnes")
+            stats_info.append(f"Valeurs manquantes: {df.isna().sum().sum()} ({df.isna().sum().sum()/(df.size)*100:.1f}%)")
+            
+            # Statistiques sur les corrélations
+            if len(numeric_cols) >= 2:
+                try:
+                    corr_matrix = df[numeric_cols].corr()
+                    # Trouver les paires les plus corrélées
+                    corr_pairs = []
+                    for i, col1 in enumerate(numeric_cols):
+                        for j, col2 in enumerate(numeric_cols):
+                            if i < j:
+                                corr_pairs.append((col1, col2, abs(corr_matrix.loc[col1, col2])))
+                    
+                    # Trier et prendre les 3 plus fortes corrélations
+                    corr_pairs.sort(key=lambda x: x[2], reverse=True)
+                    
+                    if corr_pairs and corr_pairs[0][2] > 0.5:
+                        top_corr = corr_pairs[0]
+                        stats_info.append(f"Corrélation forte: {top_corr[0]} et {top_corr[1]} ({top_corr[2]:.2f})")
+                except:
+                    pass
+            
+            # Système de prompt plus avancé pour Ollama
+            system_prompt = """Tu es un data scientist expert en analyse de données. 
+    Tu dois fournir des insights clairs et actionnables basés sur les données.
+    Tes insights doivent être pertinents, spécifiques, et aller au-delà des simples statistiques descriptives.
+    Structure ton analyse en exactement 2 insights numérotés, chacun focalisé sur un aspect différent du dataset.
+    N'utilise pas d'introduction ni de conclusion, va directement aux insights."""
+
+            # Prompt principal
+            user_prompt = f"""Analyse ce dataset avec les caractéristiques suivantes:
+
+    {chr(10).join(stats_info)}
+
+    Colonnes numériques: {', '.join(numeric_cols[:10])}{"..." if len(numeric_cols) > 10 else ""}
+    Colonnes catégorielles: {', '.join(categorical_cols[:10])}{"..." if len(categorical_cols) > 10 else ""}
+
+    {f"Contexte business: {context}" if context else ""}
+
+    Donne exactement 2 insights pertinents et actionnables, numérotés 1 et 2."""
+
+            # Utiliser le format de système+prompt d'Ollama
+            full_prompt = f"<s>[INST] {system_prompt} [/INST]</s>\n\n<s>[INST] {user_prompt} [/INST]"
+            
+            # Appel à Ollama
+            response = self.generate_with_ollama(
+                full_prompt,
+                max_tokens=800,  # Ollama peut gérer des réponses plus longues
+                temperature=0.3  # Température basse pour des réponses cohérentes
+            )
+            
+            if response and "choices" in response and response["choices"][0]["text"]:
+                analysis = response["choices"][0]["text"].strip()
+                self.logger.info("Analyse générée avec succès par Ollama")
+                return analysis
+            else:
+                self.logger.error("Réponse vide ou incorrecte d'Ollama")
+                return None
+                
         except Exception as e:
-            self.logger.error(f"Erreur d'analyse: {e}")
+            self.logger.error(f"Erreur d'analyse avec Ollama: {e}")
             return None
     
     def transform_file(self, input_path, output_path=None, context=None):
@@ -929,3 +1030,5 @@ if __name__ == "__main__":
                 print(metadata["analysis"])
     else:
         print("Usage: python transformer.py input.csv [output.csv] [model_path] [context]")
+
+   
