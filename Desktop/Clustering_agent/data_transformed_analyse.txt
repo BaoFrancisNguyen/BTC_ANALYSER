@@ -1,0 +1,8 @@
+ANALYSE DU DATASET PAR MISTRAL
+============================
+
+1. Les personnes qui ont une durée de somme moins de 5 heures par nuit ont un taux de dépression beaucoup plus élevé (58%). Cela suggère que la qualité et la quantité de somme peuvent avoir un impact significatif sur la santé mentale.
+
+2. Les personnes âgées de moins de 30 ans qui travaillent sont plus susceptibles d'avoir un diplôme universitaire (corrélation de 0.43). Cela pourrait indiquer que les jeunes qui travaillent sont plus motivés et disposés à poursuivre des études supérieures.
+
+3. Les personnes ayant un diplôme universitaire et travaillant sont plus susceptibles de faire partie de la population ayant une faible probabilité de dépression (corrélation de 0.43). Cela pourrait indiquer que l'éducation et
